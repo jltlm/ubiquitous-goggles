@@ -15,6 +15,13 @@ SHOT_NORMAL_COLOR = (255, 0, 0)
 SHOT_SIGNAL_COLOR = (0, 255, 0)
 SHOT_FIRE_COLOR = (0, 0, 255)
 
+INITIAL_HEALTH = 4
+DAMAGE_FACE = 2
+DAMAGE_HAND = 1
+DAMAGE_GRACE_PERIOD = 0.75
+
+SCORE_PER_KILL = 100
+
 
 class Rect:
     def __init__(self, position=[0, 0], dimension=256) -> None:
@@ -72,6 +79,15 @@ class Rect:
     def get_hits(self):
         return self.hits
 
+    def intersects(self, other_box) -> bool:
+        x1min, y1min = self.position
+        x1max, y1max = self.get_end()
+        x2min, y2min, w, h = other_box
+        x2max = x2min + w
+        y2max = y2min + h
+
+        return x1min < x2max and x2min < x1max and y1min < y2max and y2min < y1max
+
     def render(self, image):
         rect_color = (0, 255, 0) if len(self.hits) > 0 else (0, 0, 255)
         end = self.get_end()
@@ -104,8 +120,12 @@ rect_list = []
 previous_loop_time = time.time()
 previous_shot_time = previous_loop_time
 previous_shot_tracer = None
+previous_damaged_time = None
 previous_spawn_time = None
 spawn_delay = None
+
+health = INITIAL_HEALTH
+score = 0
 
 while cap.isOpened():
     current_time = time.time()
@@ -147,6 +167,7 @@ while cap.isOpened():
         spawn_delay = random.normalvariate(4, 1)
 
     face_bounding_box = None
+    is_hit = 0  # 0 is not hit, 1 is hit on face, 2 is hit on hand
 
     if face_results.detections:
         detection = next(iter(face_results.detections))
@@ -163,6 +184,8 @@ while cap.isOpened():
 
         for rect in rect_list:
             rect.chase(face_center, delta_time)
+            if is_hit == 0 and rect.intersects(face_bounding_box):
+                is_hit = 1
 
     if hand_results.multi_hand_landmarks:
         for hand_landmarks in hand_results.multi_hand_landmarks:
@@ -176,7 +199,6 @@ while cap.isOpened():
             end = direction * 100 + index_tip
 
             hit_indices = []  # The indices of the rectangles that are hit.
-            is_hit = False
             for i, rect in enumerate(rect_list):
                 hits = rect.compute_hits(index_tip, direction)
                 for hit in hits:
@@ -187,7 +209,7 @@ while cap.isOpened():
                 if not face_results.detections:
                     rect.chase(index_mcp, delta_time)
 
-                if is_hit:
+                if is_hit != 0:
                     continue
                 rect_end = rect.get_end()
                 for landmark in hand_landmarks.landmark:
@@ -199,7 +221,7 @@ while cap.isOpened():
                         and y >= rect.position[1]
                         and y <= rect_end[1]
                     ):
-                        is_hit = True
+                        is_hit = 2
                         break
 
             delta_time_shot = current_time - previous_shot_time
@@ -240,8 +262,13 @@ while cap.isOpened():
                     8,
                 )
 
-            if is_hit:
-                print("hit")
+    if is_hit != 0 and (
+        previous_damaged_time is None
+        or current_time - previous_damaged_time > DAMAGE_GRACE_PERIOD
+    ):
+        health -= DAMAGE_FACE if is_hit == 1 else DAMAGE_HAND
+        previous_damaged_time = current_time
+        print(f"Health: {health}")
 
     for rect in rect_list:
         rect.render(image)
