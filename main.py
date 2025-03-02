@@ -102,6 +102,7 @@ class Rect:
 
 
 game_is_on = False
+game_over = False
 
 hands = mp_hands.Hands(
     static_image_mode=False,
@@ -183,7 +184,7 @@ while cap.isOpened():
         if recognizer_is_on:
             recognizer.close()
             recognizer_is_on = False
-    else:
+    elif recognizer_is_on:
         mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=image)
         recognizer.recognize_async(mp_image, int((current_time - start_time) * 1000))
 
@@ -312,6 +313,10 @@ while cap.isOpened():
         or current_time - previous_damaged_time > DAMAGE_GRACE_PERIOD
     ):
         health -= DAMAGE_FACE if is_hit == 1 else DAMAGE_HAND
+        if health <= 0:
+            game_over = True
+            game_is_on = False
+            rect_list.clear()
         previous_damaged_time = current_time
         print(f"Health: {health}")
 
@@ -339,6 +344,25 @@ while cap.isOpened():
             (0, 0, 255),
             4,
         )
+    elif game_over:
+        font_face = cv2.FONT_HERSHEY_SIMPLEX
+        font_size = 4
+        thickness = 6
+        text = f"Score: {score}"
+        text_width, text_height = cv2.getTextSize(
+            text, font_face, font_size, thickness
+        )[0]
+        org = (int((w - text_width) / 2), 200)
+        cv2.putText(
+            image,
+            text,
+            org,
+            font_face,
+            font_size,
+            (0, 0, 255),
+            thickness,
+        )
+        pass
     else:
         cv2.putText(
             image,
