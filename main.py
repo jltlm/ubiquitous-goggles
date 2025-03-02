@@ -160,7 +160,6 @@ def process_results(result):
 
 
 while cap.isOpened():
-    print(game_is_on)
     current_time = time.time()
     delta_time = current_time - previous_loop_time
     previous_loop_time = current_time
