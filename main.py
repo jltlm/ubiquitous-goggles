@@ -13,6 +13,56 @@ def clip(value, max_value):
         return value
 
 
+class Rect:
+    position = (0, 0)
+    dimension = 256
+    hits = []
+
+    def get_end(self):
+        return self.position[0] + self.dimension, self.position[1] + self.dimension
+
+    def compute_hits(self, origin: np.ndarray, direction: np.ndarray):
+        self.hits.clear()
+        end = self.get_end()
+
+        t = (self.position[0] - origin[0]) / direction[0]
+        if t > 0:
+            cast_pos = t * direction + origin
+            cast_pos = cast_pos.astype(int)
+            if cast_pos[1] >= self.position[1] and cast_pos[1] <= end[1]:
+                self.hits.append(cast_pos)
+
+        t = (end[0] - origin[0]) / direction[0]
+        if t > 0:
+            cast_pos = t * direction + origin
+            cast_pos = cast_pos.astype(int)
+            if cast_pos[1] >= self.position[1] and cast_pos[1] <= end[1]:
+                self.hits.append(cast_pos)
+
+        t = (self.position[1] - origin[1]) / direction[1]
+        if t > 0:
+            cast_pos = t * direction + origin
+            cast_pos = cast_pos.astype(int)
+            if cast_pos[0] >= self.position[0] and cast_pos[0] <= end[0]:
+                self.hits.append(cast_pos)
+
+        t = (end[1] - origin[1]) / direction[1]
+        if t > 0:
+            cast_pos = t * direction + origin
+            cast_pos = cast_pos.astype(int)
+            if cast_pos[0] >= self.position[0] and cast_pos[0] <= end[0]:
+                self.hits.append(cast_pos)
+
+        return self.hits
+
+    def get_hits(self):
+        return self.hits
+
+    def render(self, image):
+        rect_color = (0, 255, 0) if len(self.hits) > 0 else (0, 0, 255)
+        cv2.rectangle(image, self.position, self.get_end(), rect_color, 3)
+
+
 hands = mp_hands.Hands(
     static_image_mode=False,
     max_num_hands=1,
@@ -36,11 +86,7 @@ while cap.isOpened():
     image.flags.writeable = True
     image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
     h, w, c = image.shape
-    rect_start = (0, 0)
-    rect_dim = 256
-    rect_end = (rect_start[0] + rect_dim, rect_start[1] + rect_dim)
-    rect_pos = ((rect_start[0] + rect_end[0]) / 2, (rect_start[1] + rect_end[1]) / 2)
-    rect_hit = False
+    rect = Rect()
 
     if results.multi_hand_landmarks:
         for hand_landmarks in results.multi_hand_landmarks:
@@ -53,77 +99,17 @@ while cap.isOpened():
             direction = index_tip - index_mcp
             end = direction * 100 + index_tip
 
-            t = (rect_start[0] - index_tip[0]) / direction[0]
-            cast_pos = t * direction + index_tip
-            cast_pos = cast_pos.astype(int)
-            print(cast_pos)
-            if (
-                cast_pos[0] >= min(rect_start[0], rect_end[0])
-                and cast_pos[0] <= max(rect_start[0], rect_end[0])
-                and cast_pos[1] >= min(rect_start[1], rect_end[1])
-                and cast_pos[1] <= max(rect_start[1], rect_end[1])
-            ):
-                rect_hit = True
-
-            cv2.circle(
-                image, (clip(cast_pos[0], w), clip(cast_pos[1], h)), 16, (0, 0, 255), -1
-            )
-
-            t = (rect_end[0] - index_tip[0]) / direction[0]
-            cast_pos = t * direction + index_tip
-            cast_pos = cast_pos.astype(int)
-            print(cast_pos)
-            if (
-                cast_pos[0] >= min(rect_start[0], rect_end[0])
-                and cast_pos[0] <= max(rect_start[0], rect_end[0])
-                and cast_pos[1] >= min(rect_start[1], rect_end[1])
-                and cast_pos[1] <= max(rect_start[1], rect_end[1])
-            ):
-                rect_hit = True
-
-            cv2.circle(
-                image, (clip(cast_pos[0], w), clip(cast_pos[1], h)), 16, (0, 0, 255), -1
-            )
-
-            t = (rect_start[1] - index_tip[1]) / direction[1]
-            cast_pos = t * direction + index_tip
-            cast_pos = cast_pos.astype(int)
-            print(cast_pos)
-            if (
-                cast_pos[0] >= min(rect_start[0], rect_end[0])
-                and cast_pos[0] <= max(rect_start[0], rect_end[0])
-                and cast_pos[1] >= min(rect_start[1], rect_end[1])
-                and cast_pos[1] <= max(rect_start[1], rect_end[1])
-            ):
-                rect_hit = True
-
-            cv2.circle(
-                image, (clip(cast_pos[0], w), clip(cast_pos[1], h)), 16, (0, 0, 255), -1
-            )
-
-            t = (rect_end[1] - index_tip[1]) / direction[1]
-            cast_pos = t * direction + index_tip
-            cast_pos = cast_pos.astype(int)
-            print(cast_pos)
-            if (
-                cast_pos[0] >= min(rect_start[0], rect_end[0])
-                and cast_pos[0] <= max(rect_start[0], rect_end[0])
-                and cast_pos[1] >= min(rect_start[1], rect_end[1])
-                and cast_pos[1] <= max(rect_start[1], rect_end[1])
-            ):
-                rect_hit = True
+            hits = rect.compute_hits(index_tip, direction)
+            for hit in hits:
+                cv2.circle(image, (hit[0], hit[1]), 16, (0, 0, 255), -1)
 
             cv2.circle(image, (index_tip[0], index_tip[1]), 5, (255, 0, 0), -1)
             cv2.circle(image, (index_mcp[0], index_mcp[1]), 5, (255, 0, 0), -1)
-            cv2.circle(
-                image, (clip(cast_pos[0], w), clip(cast_pos[1], h)), 16, (0, 0, 255), -1
-            )
             cv2.line(
                 image, (index_tip[0], index_tip[1]), (end[0], end[1]), (255, 0, 0), 5
             )
 
-    rect_color = (0, 255, 0) if rect_hit else (0, 0, 255)
-    cv2.rectangle(image, rect_start, rect_end, rect_color, 3)
+    rect.render(image)
 
     image = cv2.flip(image, 1)
     cv2.imshow("MediaPipe Hands", image)
