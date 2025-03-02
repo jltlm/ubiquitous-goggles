@@ -1,8 +1,7 @@
 import cv2
-import numpy as np
 import mediapipe.python.solutions.drawing_utils as mp_drawing
 import mediapipe.python.solutions.hands as mp_hands
-from typing import Tuple
+import numpy as np
 
 
 def clip(value, max_value):
