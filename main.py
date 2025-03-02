@@ -203,8 +203,6 @@ while cap.isOpened():
                 for i in reversed(hit_indices):
                     rect_list.pop(i)
 
-            cv2.circle(image, (index_tip[0], index_tip[1]), 5, (255, 0, 0), -1)
-            cv2.circle(image, (index_mcp[0], index_mcp[1]), 5, (255, 0, 0), -1)
             if previous_shot_tracer is not None:
                 start, end = previous_shot_tracer
                 cv2.line(
