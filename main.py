@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 import mediapipe.python.solutions.drawing_utils as mp_drawing
 import mediapipe.python.solutions.hands as mp_hands
+from typing import Tuple
 
 
 hands = mp_hands.Hands(
@@ -12,6 +13,7 @@ hands = mp_hands.Hands(
 )
 
 cap = cv2.VideoCapture(0)  # 0 for default camera
+
 
 while cap.isOpened():
     success, image = cap.read()
@@ -27,7 +29,7 @@ while cap.isOpened():
     image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
     h, w, c = image.shape
     rect_start = (0, 0)
-    rect_dim = 128
+    rect_dim = 256
     rect_end = (rect_start[0] + rect_dim, rect_start[1] + rect_dim)
     rect_pos = ((rect_start[0] + rect_end[0]) / 2, (rect_start[1] + rect_end[1]) / 2)
     rect_hit = False
@@ -45,16 +47,61 @@ while cap.isOpened():
 
             t = (rect_start[0] - index_tip[0]) / direction[0]
             cast_pos = t * direction + index_tip
+            cast_pos = cast_pos.astype(int)
+            print(cast_pos)
             if (
-                cast_pos[0] >= rect_start[0]
-                and cast_pos[0] <= rect_end[0]
-                and cast_pos[1] >= rect_start[1]
-                and cast_pos[1] <= rect_end[1]
+                cast_pos[0] >= min(rect_start[0], rect_end[0])
+                and cast_pos[0] <= max(rect_start[0], rect_end[0])
+                and cast_pos[1] >= min(rect_start[1], rect_end[1])
+                and cast_pos[1] <= max(rect_start[1], rect_end[1])
+            ):
+                rect_hit = True
+
+            cv2.circle(image, (cast_pos[0], cast_pos[1]), 16, (0, 0, 255), -1)
+
+            t = (rect_end[0] - index_tip[0]) / direction[0]
+            cast_pos = t * direction + index_tip
+            cast_pos = cast_pos.astype(int)
+            print(cast_pos)
+            if (
+                cast_pos[0] >= min(rect_start[0], rect_end[0])
+                and cast_pos[0] <= max(rect_start[0], rect_end[0])
+                and cast_pos[1] >= min(rect_start[1], rect_end[1])
+                and cast_pos[1] <= max(rect_start[1], rect_end[1])
+            ):
+                rect_hit = True
+
+            cv2.circle(image, (cast_pos[0], cast_pos[1]), 16, (0, 0, 255), -1)
+
+            t = (rect_start[1] - index_tip[1]) / direction[1]
+            cast_pos = t * direction + index_tip
+            cast_pos = cast_pos.astype(int)
+            print(cast_pos)
+            if (
+                cast_pos[0] >= min(rect_start[0], rect_end[0])
+                and cast_pos[0] <= max(rect_start[0], rect_end[0])
+                and cast_pos[1] >= min(rect_start[1], rect_end[1])
+                and cast_pos[1] <= max(rect_start[1], rect_end[1])
+            ):
+                rect_hit = True
+
+            cv2.circle(image, (cast_pos[0], cast_pos[1]), 16, (0, 0, 255), -1)
+
+            t = (rect_end[1] - index_tip[1]) / direction[1]
+            cast_pos = t * direction + index_tip
+            cast_pos = cast_pos.astype(int)
+            print(cast_pos)
+            if (
+                cast_pos[0] >= min(rect_start[0], rect_end[0])
+                and cast_pos[0] <= max(rect_start[0], rect_end[0])
+                and cast_pos[1] >= min(rect_start[1], rect_end[1])
+                and cast_pos[1] <= max(rect_start[1], rect_end[1])
             ):
                 rect_hit = True
 
             cv2.circle(image, (index_tip[0], index_tip[1]), 5, (255, 0, 0), -1)
             cv2.circle(image, (index_mcp[0], index_mcp[1]), 5, (255, 0, 0), -1)
+            cv2.circle(image, (cast_pos[0], cast_pos[1]), 16, (0, 0, 255), -1)
             cv2.line(
                 image, (index_tip[0], index_tip[1]), (end[0], end[1]), (255, 0, 0), 5
             )
