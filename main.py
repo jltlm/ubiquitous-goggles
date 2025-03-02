@@ -146,11 +146,23 @@ while cap.isOpened():
         previous_spawn_time = current_time
         spawn_delay = random.normalvariate(4, 1)
 
+    face_bounding_box = None
 
     if face_results.detections:
         detection = next(iter(face_results.detections))
 
         mp_drawing.draw_detection(image, detection)
+
+        bbox = detection.location_data.relative_bounding_box
+        fbbx = int(bbox.xmin * w)
+        fbby = int(bbox.ymin * h)
+        fbbw = int(bbox.width * w)
+        fbbh = int(bbox.height * h)
+        face_center = np.array((fbbx + fbbw / 2, fbby + fbbh / 2))
+        face_bounding_box = (fbbx, fbby, fbbw, fbbh)
+
+        for rect in rect_list:
+            rect.chase(face_center, delta_time)
 
     if hand_results.multi_hand_landmarks:
         for hand_landmarks in hand_results.multi_hand_landmarks:
@@ -172,7 +184,8 @@ while cap.isOpened():
                 if len(hits) > 0:
                     hit_indices.append(i)
 
-                rect.chase(index_mcp, delta_time)
+                if not face_results.detections:
+                    rect.chase(index_mcp, delta_time)
 
                 if is_hit:
                     continue
