@@ -14,13 +14,10 @@ def clip(value, max_value):
 
 
 class Rect:
-    position = [0, 0]
-    dimension = 256
-    hits = []
-
     def __init__(self, position=[0, 0], dimension=256) -> None:
-        self.position = position
+        self.position = list(position)
         self.dimension = dimension
+        self.hits = []
 
     def get_end(self):
         return self.position[0] + self.dimension, self.position[1] + self.dimension
