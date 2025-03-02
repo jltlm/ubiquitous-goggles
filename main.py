@@ -5,6 +5,15 @@ import mediapipe.python.solutions.hands as mp_hands
 from typing import Tuple
 
 
+def clip(value, max_value):
+    if value < 0:
+        return 0
+    elif value > max_value:
+        return max_value
+    else:
+        return value
+
+
 hands = mp_hands.Hands(
     static_image_mode=False,
     max_num_hands=1,
@@ -57,7 +66,9 @@ while cap.isOpened():
             ):
                 rect_hit = True
 
-            cv2.circle(image, (cast_pos[0], cast_pos[1]), 16, (0, 0, 255), -1)
+            cv2.circle(
+                image, (clip(cast_pos[0], w), clip(cast_pos[1], h)), 16, (0, 0, 255), -1
+            )
 
             t = (rect_end[0] - index_tip[0]) / direction[0]
             cast_pos = t * direction + index_tip
@@ -71,7 +82,9 @@ while cap.isOpened():
             ):
                 rect_hit = True
 
-            cv2.circle(image, (cast_pos[0], cast_pos[1]), 16, (0, 0, 255), -1)
+            cv2.circle(
+                image, (clip(cast_pos[0], w), clip(cast_pos[1], h)), 16, (0, 0, 255), -1
+            )
 
             t = (rect_start[1] - index_tip[1]) / direction[1]
             cast_pos = t * direction + index_tip
@@ -85,7 +98,9 @@ while cap.isOpened():
             ):
                 rect_hit = True
 
-            cv2.circle(image, (cast_pos[0], cast_pos[1]), 16, (0, 0, 255), -1)
+            cv2.circle(
+                image, (clip(cast_pos[0], w), clip(cast_pos[1], h)), 16, (0, 0, 255), -1
+            )
 
             t = (rect_end[1] - index_tip[1]) / direction[1]
             cast_pos = t * direction + index_tip
@@ -101,7 +116,9 @@ while cap.isOpened():
 
             cv2.circle(image, (index_tip[0], index_tip[1]), 5, (255, 0, 0), -1)
             cv2.circle(image, (index_mcp[0], index_mcp[1]), 5, (255, 0, 0), -1)
-            cv2.circle(image, (cast_pos[0], cast_pos[1]), 16, (0, 0, 255), -1)
+            cv2.circle(
+                image, (clip(cast_pos[0], w), clip(cast_pos[1], h)), 16, (0, 0, 255), -1
+            )
             cv2.line(
                 image, (index_tip[0], index_tip[1]), (end[0], end[1]), (255, 0, 0), 5
             )
