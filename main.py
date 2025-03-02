@@ -1,4 +1,5 @@
 import os.path
+from play_sounds import play_file
 import random
 import time
 
@@ -299,6 +300,7 @@ while cap.isOpened():
                     5,
                 )
             else:
+                play_file("shot_sound.mp3", blocking=False)
                 previous_shot_tracer = ((index_tip[0], index_tip[1]), (end[0], end[1]))
                 previous_shot_time = current_time
                 for i in reversed(hit_indices):
