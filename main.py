@@ -362,7 +362,6 @@ while cap.isOpened():
             (0, 0, 255),
             thickness,
         )
-        pass
     else:
         cv2.putText(
             image,
