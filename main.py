@@ -1,6 +1,5 @@
 import random
 import time
-import os.path
 
 import cv2
 import mediapipe as mp
@@ -8,7 +7,6 @@ import mediapipe.python.solutions.drawing_utils as mp_drawing
 import mediapipe.python.solutions.face_detection as mp_face_detection
 import mediapipe.python.solutions.hands as mp_hands
 import numpy as np
-
 
 SHOT_DELAY = 3
 SHOT_SIGNAL_TIME = 0.4
