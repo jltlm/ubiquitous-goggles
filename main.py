@@ -51,11 +51,11 @@ class Rect:
         return self.hits
 
     def chase(self, target, delta_time):
-        diff = dbg(np.array(self.position) - target, "diff")
-        norm = dbg(np.linalg.norm(diff), "norm")
+        diff = np.array(self.position) - target
+        norm = np.linalg.norm(diff)
         if norm == 0:
             return
-        chase_direction = dbg(diff / norm, "direction")
+        chase_direction = diff / norm
         offset = chase_direction * 100 * delta_time
         self.position[0] -= offset[0]
         self.position[1] -= offset[1]
