@@ -250,6 +250,7 @@ while cap.isOpened():
                 previous_shot_tracer = ((index_tip[0], index_tip[1]), (end[0], end[1]))
                 previous_shot_time = current_time
                 for i in reversed(hit_indices):
+                    score += SCORE_PER_KILL
                     rect_list.pop(i)
 
             if previous_shot_tracer is not None:
@@ -279,6 +280,15 @@ while cap.isOpened():
         image,
         f"Health: {health}",
         (75, 100),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        2,
+        (0, 0, 255),
+        4,
+    )
+    cv2.putText(
+        image,
+        f"Score: {score}",
+        (75, 200),
         cv2.FONT_HERSHEY_SIMPLEX,
         2,
         (0, 0, 255),
