@@ -138,6 +138,22 @@ while cap.isOpened():
             chaser_rect.position[0] += dx
             chaser_rect.position[1] += dy
 
+            is_hit = False
+            chaser_rect_end = chaser_rect.get_end()
+            for landmark in hand_landmarks.landmark:
+                x = int(landmark.x * w)
+                y = int(landmark.y * h)
+                if (
+                    x >= chaser_rect.position[0]
+                    and x <= chaser_rect_end[0]
+                    and y >= chaser_rect.position[1]
+                    and y <= chaser_rect_end[1]
+                ):
+                    is_hit = True
+                    break
+            if is_hit:
+                print("hit")
+
     rect.render(image)
     chaser_rect.render(image)
 
