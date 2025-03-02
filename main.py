@@ -348,11 +348,23 @@ while cap.isOpened():
         font_face = cv2.FONT_HERSHEY_SIMPLEX
         font_size = 4
         thickness = 6
-        text = f"Score: {score}"
+        text = "Game Over"
         text_width, text_height = cv2.getTextSize(
             text, font_face, font_size, thickness
         )[0]
         org = (int((w - text_width) / 2), 200)
+        cv2.putText(
+            image,
+            text,
+            org,
+            font_face,
+            font_size,
+            (0, 0, 255),
+            thickness,
+        )
+        text = f"Score: {score}"
+        text_width, _ = cv2.getTextSize(text, font_face, font_size, thickness)[0]
+        org = (int((w - text_width) / 2), 200 + text_height + 48)
         cv2.putText(
             image,
             text,
