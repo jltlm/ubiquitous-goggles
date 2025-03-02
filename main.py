@@ -274,6 +274,17 @@ while cap.isOpened():
         rect.render(image)
 
     image = cv2.flip(image, 1)
+
+    cv2.putText(
+        image,
+        f"Health: {health}",
+        (75, 100),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        2,
+        (0, 0, 255),
+        4,
+    )
+
     cv2.imshow("MediaPipe Hands", image)
     if cv2.waitKey(5) & 0xFF == 27:
         break
