@@ -26,6 +26,7 @@ while cap.isOpened():
     image.flags.writeable = True
     image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
     h, w, c = image.shape
+    cv2.rectangle(image,(0,0),(128,128),(0,255,0),3)
 
     if results.multi_hand_landmarks:
         for hand_landmarks in results.multi_hand_landmarks:
