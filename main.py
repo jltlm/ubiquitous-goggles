@@ -127,6 +127,8 @@ spawn_delay = None
 health = INITIAL_HEALTH
 score = 0
 
+game_is_on = False
+
 while cap.isOpened():
     current_time = time.time()
     delta_time = current_time - previous_loop_time
@@ -147,7 +149,7 @@ while cap.isOpened():
     image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
     h, w, c = image.shape
 
-    if (
+    if game_is_on and (
         previous_spawn_time is None
         or spawn_delay is None
         or current_time - previous_spawn_time > spawn_delay
@@ -174,22 +176,26 @@ while cap.isOpened():
 
         mp_drawing.draw_detection(image, detection)
 
-        bbox = detection.location_data.relative_bounding_box
-        fbbx = int(bbox.xmin * w)
-        fbby = int(bbox.ymin * h)
-        fbbw = int(bbox.width * w)
-        fbbh = int(bbox.height * h)
-        face_center = np.array((fbbx + fbbw / 2, fbby + fbbh / 2))
-        face_bounding_box = (fbbx, fbby, fbbw, fbbh)
+        if game_is_on:
+            bbox = detection.location_data.relative_bounding_box
+            fbbx = int(bbox.xmin * w)
+            fbby = int(bbox.ymin * h)
+            fbbw = int(bbox.width * w)
+            fbbh = int(bbox.height * h)
+            face_center = np.array((fbbx + fbbw / 2, fbby + fbbh / 2))
+            face_bounding_box = (fbbx, fbby, fbbw, fbbh)
 
-        for rect in rect_list:
-            rect.chase(face_center, delta_time)
-            if is_hit == 0 and rect.intersects(face_bounding_box):
-                is_hit = 1
+            for rect in rect_list:
+                rect.chase(face_center, delta_time)
+                if is_hit == 0 and rect.intersects(face_bounding_box):
+                    is_hit = 1
 
     if hand_results.multi_hand_landmarks:
         for hand_landmarks in hand_results.multi_hand_landmarks:
             mp_drawing.draw_landmarks(image, hand_landmarks, mp_hands.HAND_CONNECTIONS)
+
+            if not game_is_on:
+                continue
 
             index_tip = hand_landmarks.landmark[mp_hands.HandLandmark.INDEX_FINGER_TIP]
             index_tip = np.array((int(index_tip.x * w), int(index_tip.y * h)))
@@ -276,24 +282,35 @@ while cap.isOpened():
 
     image = cv2.flip(image, 1)
 
-    cv2.putText(
-        image,
-        f"Health: {health}",
-        (75, 100),
-        cv2.FONT_HERSHEY_SIMPLEX,
-        2,
-        (0, 0, 255),
-        4,
-    )
-    cv2.putText(
-        image,
-        f"Score: {score}",
-        (75, 200),
-        cv2.FONT_HERSHEY_SIMPLEX,
-        2,
-        (0, 0, 255),
-        4,
-    )
+    if game_is_on:
+        cv2.putText(
+            image,
+            f"Health: {health}",
+            (75, 100),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            2,
+            (0, 0, 255),
+            4,
+        )
+        cv2.putText(
+            image,
+            f"Score: {score}",
+            (75, 200),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            2,
+            (0, 0, 255),
+            4,
+        )
+    else:
+        cv2.putText(
+            image,
+            "Thumbs Up to Start",
+            (75, 100),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            2,
+            (0, 0, 255),
+            4,
+        )
 
     cv2.imshow("MediaPipe Hands", image)
     if cv2.waitKey(5) & 0xFF == 27:
