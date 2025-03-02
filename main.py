@@ -1,11 +1,14 @@
 import random
 import time
+import os.path
 
 import cv2
+import mediapipe as mp
 import mediapipe.python.solutions.drawing_utils as mp_drawing
 import mediapipe.python.solutions.face_detection as mp_face_detection
 import mediapipe.python.solutions.hands as mp_hands
 import numpy as np
+
 
 SHOT_DELAY = 3
 SHOT_SIGNAL_TIME = 0.4
@@ -100,6 +103,8 @@ class Rect:
         )
 
 
+game_is_on = False
+
 hands = mp_hands.Hands(
     static_image_mode=False,
     max_num_hands=1,
@@ -112,13 +117,30 @@ face_detection = mp_face_detection.FaceDetection(
     min_detection_confidence=0.5,
 )
 
+# Initialize Hand Gesture Recognizer
+BaseOptions = mp.tasks.BaseOptions
+GestureRecognizer = mp.tasks.vision.GestureRecognizer
+GestureRecognizerOptions = mp.tasks.vision.GestureRecognizerOptions
+GestureRecognizerResult = mp.tasks.vision.GestureRecognizerResult
+VisionRunningMode = mp.tasks.vision.RunningMode
+
+
+options = GestureRecognizerOptions(
+    base_options=BaseOptions(model_asset_path="gesture_recognizer.task"),
+    running_mode=VisionRunningMode.LIVE_STREAM,
+    result_callback=lambda result, image, timestamp_ms: process_results(result),
+)
+recognizer = GestureRecognizer.create_from_options(options)
+recognizer_is_on = True
+
 cap = cv2.VideoCapture(0)  # 0 for default camera
 
 # initializing things for the chasing rectangle
 rect_list = []
 
-previous_loop_time = time.time()
-previous_shot_time = previous_loop_time
+start_time = time.time()
+previous_loop_time = start_time
+previous_shot_time = start_time
 previous_shot_tracer = None
 previous_damaged_time = None
 previous_spawn_time = None
@@ -127,9 +149,19 @@ spawn_delay = None
 health = INITIAL_HEALTH
 score = 0
 
-game_is_on = False
+
+def process_results(result):
+    if result.gestures:
+        for gesture in result.gestures:
+            print(gesture)
+            if gesture[0].category_name == "Thumb_Up" and gesture[0].score > 0.7:
+                print("Thumbs_Up")
+                global game_is_on
+                game_is_on = True
+
 
 while cap.isOpened():
+    print(game_is_on)
     current_time = time.time()
     delta_time = current_time - previous_loop_time
     previous_loop_time = current_time
@@ -148,6 +180,14 @@ while cap.isOpened():
     image.flags.writeable = True
     image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
     h, w, c = image.shape
+
+    if game_is_on:
+        if recognizer_is_on:
+            recognizer.close()
+            recognizer_is_on = False
+    else:
+        mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=image)
+        recognizer.recognize_async(mp_image, int((current_time - start_time) * 1000))
 
     if game_is_on and (
         previous_spawn_time is None
