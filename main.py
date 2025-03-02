@@ -14,9 +14,13 @@ def clip(value, max_value):
 
 
 class Rect:
-    position = (0, 0)
+    position = [0, 0]
     dimension = 256
     hits = []
+
+    def __init__(self, position=[0, 0], dimension=256) -> None:
+        self.position = position
+        self.dimension = dimension
 
     def get_end(self):
         return self.position[0] + self.dimension, self.position[1] + self.dimension
@@ -72,6 +76,8 @@ hands = mp_hands.Hands(
 
 cap = cv2.VideoCapture(0)  # 0 for default camera
 
+# initializing things for the chasing rectangle
+chaser_rect = Rect(dimension=50)
 
 while cap.isOpened():
     success, image = cap.read()
@@ -109,7 +115,20 @@ while cap.isOpened():
                 image, (index_tip[0], index_tip[1]), (end[0], end[1]), (255, 0, 0), 5
             )
 
+            # compare chaser rect with hand origin
+            chaser_to_index_mcp = np.array(chaser_rect.position) - index_mcp
+            if chaser_to_index_mcp[0] < 0:
+                chaser_rect.position[0] += 2
+            else:
+                chaser_rect.position[0] -= 2
+
+            if chaser_to_index_mcp[1] < 0:
+                chaser_rect.position[1] += 2
+            else:
+                chaser_rect.position[1] -= 2
+
     rect.render(image)
+    chaser_rect.render(image)
 
     image = cv2.flip(image, 1)
     cv2.imshow("MediaPipe Hands", image)
