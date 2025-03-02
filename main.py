@@ -180,7 +180,7 @@ while cap.isOpened():
             for i, rect in enumerate(rect_list):
                 hits = rect.compute_hits(index_tip, direction)
                 for hit in hits:
-                    cv2.circle(image, (hit[0], hit[1]), 16, (0, 0, 255), -1)
+                    cv2.circle(image, (hit[0], hit[1]), 10, (0, 0, 255), -1)
                 if len(hits) > 0:
                     hit_indices.append(i)
 
