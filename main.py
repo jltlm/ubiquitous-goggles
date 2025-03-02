@@ -44,6 +44,7 @@ while cap.isOpened():
                 image, (index_tip[0], index_tip[1]), (end[0], end[1]), (255, 0, 0), 5
             )
 
+    image = cv2.flip(image, 1)
     cv2.imshow("MediaPipe Hands", image)
     if cv2.waitKey(5) & 0xFF == 27:
         break
