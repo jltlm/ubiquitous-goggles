@@ -13,6 +13,7 @@ from queue import Queue
 from time import sleep
 from sys import platform
 
+triggers = ["calculus", "target", "computer", "think"]
 
 def main():
     parser = argparse.ArgumentParser()
@@ -127,6 +128,8 @@ def main():
                 os.system('cls' if os.name=='nt' else 'clear')
                 for line in transcription:
                     print(line)
+                    if any(t in line for t in triggers):
+                        print("sdlfkjdlskfjldskfjlskdjflksdfj==============")
                 # Flush stdout.
                 print('', end='', flush=True)
             else:

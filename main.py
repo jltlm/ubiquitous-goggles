@@ -37,6 +37,7 @@ DAMAGE_GRACE_PERIOD = 0.75
 
 SCORE_PER_KILL = 100
 
+TRIGGERS = ["calculus", "target", "select", "pew", "activate"]
 
 class Rect:
     def __init__(self, position=[0, 0], dimension=256) -> None:
@@ -219,12 +220,9 @@ def voice():
                 # Clear the console to reprint the updated transcription.
                 os.system('cls' if os.name=='nt' else 'clear')
                 for line in transcription:
-                    if "select this" in line.lower():
+                    if any(trigger in line for trigger in TRIGGERS):
                         voiceSelect = True
-                        print("huzzah!!")
-                    if "hello there" in line.lower():
-                        voiceSelect = True
-                        print("huzzah!!")
+                        print("sdlfkjdlskfjldskfjlskdjflksdfj==============")
                     print(line)
                 # Flush stdout.
                 print('', end='', flush=True)
