@@ -1,3 +1,4 @@
+import os.path
 import random
 import time
 
@@ -124,8 +125,10 @@ GestureRecognizerResult = mp.tasks.vision.GestureRecognizerResult
 VisionRunningMode = mp.tasks.vision.RunningMode
 
 
+model_file_path = os.path.abspath("gesture_recognizer.task")
+print(f"file path: {model_file_path}; exists: {os.path.isfile(model_file_path)}")
 options = GestureRecognizerOptions(
-    base_options=BaseOptions(model_asset_path="gesture_recognizer.task"),
+    base_options=BaseOptions(model_asset_path=model_file_path),
     running_mode=VisionRunningMode.LIVE_STREAM,
     result_callback=lambda result, image, timestamp_ms: process_results(result),
 )
