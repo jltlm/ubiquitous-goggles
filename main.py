@@ -161,7 +161,7 @@ def process_results(result):
     if result.gestures:
         for gesture in result.gestures:
             print(gesture)
-            if gesture[0].category_name == "Thumb_Up" and gesture[0].score > 0.6:
+            if gesture[0].category_name == "Thumb_Up":
                 print("Thumbs_Up")
                 global game_is_on
                 game_is_on = True
