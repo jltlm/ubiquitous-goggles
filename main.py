@@ -106,6 +106,10 @@ while cap.isOpened():
             for hit in hits:
                 cv2.circle(image, (hit[0], hit[1]), 16, (0, 0, 255), -1)
 
+            hits = chaser_rect.compute_hits(index_tip, direction)
+            for hit in hits:
+                cv2.circle(image, (hit[0], hit[1]), 16, (0, 0, 255), -1)
+
             cv2.circle(image, (index_tip[0], index_tip[1]), 5, (255, 0, 0), -1)
             cv2.circle(image, (index_mcp[0], index_mcp[1]), 5, (255, 0, 0), -1)
             cv2.line(
