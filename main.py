@@ -363,14 +363,22 @@ while cap.isOpened():
             thickness,
         )
     else:
+        font_face = cv2.FONT_HERSHEY_SIMPLEX
+        font_size = 4
+        thickness = 6
+        text = "Thumbs Up to Start"
+        text_width, text_height = cv2.getTextSize(
+            text, font_face, font_size, thickness
+        )[0]
+        org = (int((w - text_width) / 2), 200)
         cv2.putText(
             image,
-            "Thumbs Up to Start",
-            (75, 100),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            2,
+            text,
+            org,
+            font_face,
+            font_size,
             (0, 0, 255),
-            4,
+            thickness,
         )
 
     cv2.imshow("MediaPipe Hands", image)
