@@ -6,15 +6,6 @@ import mediapipe.python.solutions.hands as mp_hands
 import numpy as np
 
 
-def clip(value, max_value):
-    if value < 0:
-        return 0
-    elif value > max_value:
-        return max_value
-    else:
-        return value
-
-
 class Rect:
     def __init__(self, position=[0, 0], dimension=256) -> None:
         self.position = list(position)
