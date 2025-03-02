@@ -118,7 +118,7 @@ hands = mp_hands.Hands(
 )
 
 face_detection = mp_face_detection.FaceDetection(
-    model_selection=0,  # 0 for short-range, 1 for full-range
+    model_selection=1,  # 0 for short-range, 1 for full-range
     min_detection_confidence=0.5,
 )
 
