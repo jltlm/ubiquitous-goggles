@@ -24,6 +24,11 @@ DAMAGE_GRACE_PERIOD = 0.75
 
 SCORE_PER_KILL = 100
 
+RECT_NORMAL_COLOR = (128, 0, 128)
+RECT_HIT_COLOR = SHOT_FIRE_COLOR
+HIT_MARKER_COLOR = SHOT_FIRE_COLOR
+TEXT_COLOR = (0, 0, 255)
+
 
 class Rect:
     def __init__(self, position=[0, 0], dimension=256) -> None:
@@ -91,7 +96,7 @@ class Rect:
         return x1min < x2max and x2min < x1max and y1min < y2max and y2min < y1max
 
     def render(self, image):
-        rect_color = (0, 255, 0) if len(self.hits) > 0 else (0, 0, 255)
+        rect_color = RECT_HIT_COLOR if len(self.hits) > 0 else RECT_NORMAL_COLOR
         end = self.get_end()
         cv2.rectangle(
             image,
@@ -249,7 +254,7 @@ while cap.isOpened():
             for i, rect in enumerate(rect_list):
                 hits = rect.compute_hits(index_tip, direction)
                 for hit in hits:
-                    cv2.circle(image, (hit[0], hit[1]), 10, (0, 0, 255), -1)
+                    cv2.circle(image, (hit[0], hit[1]), 10, HIT_MARKER_COLOR, -1)
                 if len(hits) > 0:
                     hit_indices.append(i)
 
@@ -334,7 +339,7 @@ while cap.isOpened():
             (75, 100),
             cv2.FONT_HERSHEY_SIMPLEX,
             2,
-            (0, 0, 255),
+            TEXT_COLOR,
             4,
         )
         cv2.putText(
@@ -343,7 +348,7 @@ while cap.isOpened():
             (75, 200),
             cv2.FONT_HERSHEY_SIMPLEX,
             2,
-            (0, 0, 255),
+            TEXT_COLOR,
             4,
         )
     elif game_over:
@@ -361,7 +366,7 @@ while cap.isOpened():
             org,
             font_face,
             font_size,
-            (0, 0, 255),
+            TEXT_COLOR,
             thickness,
         )
         text = f"Score: {score}"
@@ -373,7 +378,7 @@ while cap.isOpened():
             org,
             font_face,
             font_size,
-            (0, 0, 255),
+            TEXT_COLOR,
             thickness,
         )
     else:
@@ -391,7 +396,7 @@ while cap.isOpened():
             org,
             font_face,
             font_size,
-            (0, 0, 255),
+            TEXT_COLOR,
             thickness,
         )
 
