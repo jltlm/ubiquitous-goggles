@@ -1,3 +1,5 @@
+import time
+
 import cv2
 import mediapipe.python.solutions.drawing_utils as mp_drawing
 import mediapipe.python.solutions.hands as mp_hands
@@ -61,7 +63,14 @@ class Rect:
 
     def render(self, image):
         rect_color = (0, 255, 0) if len(self.hits) > 0 else (0, 0, 255)
-        cv2.rectangle(image, self.position, self.get_end(), rect_color, 3)
+        end = self.get_end()
+        cv2.rectangle(
+            image,
+            (int(self.position[0]), int(self.position[1])),
+            (int(end[0]), int(end[1])),
+            rect_color,
+            3,
+        )
 
 
 hands = mp_hands.Hands(
@@ -76,7 +85,13 @@ cap = cv2.VideoCapture(0)  # 0 for default camera
 # initializing things for the chasing rectangle
 chaser_rect = Rect(dimension=50)
 
+previous_time = time.time()
+
 while cap.isOpened():
+    current_time = time.time()
+    delta_time = current_time - previous_time
+    previous_time = current_time
+
     success, image = cap.read()
     if not success:
         print("Ignoring empty camera frame.")
@@ -118,15 +133,10 @@ while cap.isOpened():
 
             # compare chaser rect with hand origin
             chaser_to_index_mcp = np.array(chaser_rect.position) - index_mcp
-            if chaser_to_index_mcp[0] < 0:
-                chaser_rect.position[0] += 2
-            else:
-                chaser_rect.position[0] -= 2
-
-            if chaser_to_index_mcp[1] < 0:
-                chaser_rect.position[1] += 2
-            else:
-                chaser_rect.position[1] -= 2
+            dx = 100 * delta_time * (1 if chaser_to_index_mcp[0] < 0 else -1)
+            dy = 100 * delta_time * (1 if chaser_to_index_mcp[1] < 0 else -1)
+            chaser_rect.position[0] += dx
+            chaser_rect.position[1] += dy
 
     rect.render(image)
     chaser_rect.render(image)
