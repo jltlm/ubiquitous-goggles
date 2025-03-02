@@ -6,6 +6,14 @@ import mediapipe.python.solutions.drawing_utils as mp_drawing
 import mediapipe.python.solutions.hands as mp_hands
 import numpy as np
 
+SHOT_DELAY = 3
+SHOT_SIGNAL_TIME = 0.4
+SHOT_FIRE_TRACER_TIME = 0.2
+SHOT_COOLDOWN_TIME = 1
+SHOT_NORMAL_COLOR = (255, 0, 0)
+SHOT_SIGNAL_COLOR = (0, 255, 0)
+SHOT_FIRE_COLOR = (0, 0, 255)
+
 
 class Rect:
     def __init__(self, position=[0, 0], dimension=256) -> None:
@@ -88,6 +96,8 @@ cap = cv2.VideoCapture(0)  # 0 for default camera
 rect_list = []
 
 previous_loop_time = time.time()
+previous_shot_time = previous_loop_time
+previous_shot_tracer = None
 previous_spawn_time = None
 spawn_delay = None
 
@@ -139,11 +149,14 @@ while cap.isOpened():
             direction = index_tip - index_mcp
             end = direction * 100 + index_tip
 
+            hit_indices = []  # The indices of the rectangles that are hit.
             is_hit = False
-            for rect in rect_list:
+            for i, rect in enumerate(rect_list):
                 hits = rect.compute_hits(index_tip, direction)
                 for hit in hits:
                     cv2.circle(image, (hit[0], hit[1]), 16, (0, 0, 255), -1)
+                if len(hits) > 0:
+                    hit_indices.append(i)
 
                 rect.chase(index_mcp, delta_time)
 
@@ -162,11 +175,45 @@ while cap.isOpened():
                         is_hit = True
                         break
 
+            delta_time_shot = current_time - previous_shot_time
+            if delta_time_shot < SHOT_FIRE_TRACER_TIME:
+                pass
+            elif delta_time_shot < SHOT_COOLDOWN_TIME:
+                previous_shot_tracer = None
+                pass
+            elif delta_time_shot < SHOT_DELAY:
+                cv2.line(
+                    image,
+                    (index_tip[0], index_tip[1]),
+                    (end[0], end[1]),
+                    SHOT_NORMAL_COLOR,
+                    5,
+                )
+            elif delta_time_shot < SHOT_DELAY + SHOT_SIGNAL_TIME:
+                cv2.line(
+                    image,
+                    (index_tip[0], index_tip[1]),
+                    (end[0], end[1]),
+                    SHOT_SIGNAL_COLOR,
+                    5,
+                )
+            else:
+                previous_shot_tracer = ((index_tip[0], index_tip[1]), (end[0], end[1]))
+                previous_shot_time = current_time
+                for i in reversed(hit_indices):
+                    rect_list.pop(i)
+
             cv2.circle(image, (index_tip[0], index_tip[1]), 5, (255, 0, 0), -1)
             cv2.circle(image, (index_mcp[0], index_mcp[1]), 5, (255, 0, 0), -1)
-            cv2.line(
-                image, (index_tip[0], index_tip[1]), (end[0], end[1]), (255, 0, 0), 5
-            )
+            if previous_shot_tracer is not None:
+                start, end = previous_shot_tracer
+                cv2.line(
+                    image,
+                    start,
+                    end,
+                    SHOT_FIRE_COLOR,
+                    8,
+                )
 
             if is_hit:
                 print("hit")
