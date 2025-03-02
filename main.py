@@ -1,3 +1,4 @@
+import random
 import time
 
 import cv2
@@ -49,6 +50,16 @@ class Rect:
 
         return self.hits
 
+    def chase(self, target, delta_time):
+        diff = dbg(np.array(self.position) - target, "diff")
+        norm = dbg(np.linalg.norm(diff), "norm")
+        if norm == 0:
+            return
+        chase_direction = dbg(diff / norm, "direction")
+        offset = chase_direction * 100 * delta_time
+        self.position[0] -= offset[0]
+        self.position[1] -= offset[1]
+
     def get_hits(self):
         return self.hits
 
@@ -74,14 +85,16 @@ hands = mp_hands.Hands(
 cap = cv2.VideoCapture(0)  # 0 for default camera
 
 # initializing things for the chasing rectangle
-chaser_rect = Rect(dimension=50)
+rect_list = []
 
-previous_time = time.time()
+previous_loop_time = time.time()
+previous_spawn_time = None
+spawn_delay = None
 
 while cap.isOpened():
     current_time = time.time()
-    delta_time = current_time - previous_time
-    previous_time = current_time
+    delta_time = current_time - previous_loop_time
+    previous_loop_time = current_time
 
     success, image = cap.read()
     if not success:
@@ -95,7 +108,25 @@ while cap.isOpened():
     image.flags.writeable = True
     image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
     h, w, c = image.shape
-    rect = Rect()
+
+    if (
+        previous_spawn_time is None
+        or spawn_delay is None
+        or current_time - previous_spawn_time > spawn_delay
+    ):
+        x = (
+            random.uniform(0, 200)
+            if random.choice([True, False])
+            else random.uniform(w - 200, w)
+        )
+        y = (
+            random.uniform(0, 100)
+            if random.choice([True, False])
+            else random.uniform(h - 100, h)
+        )
+        rect_list.append(Rect([x, y], 64))
+        previous_spawn_time = current_time
+        spawn_delay = random.normalvariate(4, 1)
 
     if results.multi_hand_landmarks:
         for hand_landmarks in results.multi_hand_landmarks:
@@ -108,13 +139,28 @@ while cap.isOpened():
             direction = index_tip - index_mcp
             end = direction * 100 + index_tip
 
-            hits = rect.compute_hits(index_tip, direction)
-            for hit in hits:
-                cv2.circle(image, (hit[0], hit[1]), 16, (0, 0, 255), -1)
+            is_hit = False
+            for rect in rect_list:
+                hits = rect.compute_hits(index_tip, direction)
+                for hit in hits:
+                    cv2.circle(image, (hit[0], hit[1]), 16, (0, 0, 255), -1)
 
-            hits = chaser_rect.compute_hits(index_tip, direction)
-            for hit in hits:
-                cv2.circle(image, (hit[0], hit[1]), 16, (0, 0, 255), -1)
+                rect.chase(index_mcp, delta_time)
+
+                if is_hit:
+                    continue
+                rect_end = rect.get_end()
+                for landmark in hand_landmarks.landmark:
+                    x = int(landmark.x * w)
+                    y = int(landmark.y * h)
+                    if (
+                        x >= rect.position[0]
+                        and x <= rect_end[0]
+                        and y >= rect.position[1]
+                        and y <= rect_end[1]
+                    ):
+                        is_hit = True
+                        break
 
             cv2.circle(image, (index_tip[0], index_tip[1]), 5, (255, 0, 0), -1)
             cv2.circle(image, (index_mcp[0], index_mcp[1]), 5, (255, 0, 0), -1)
@@ -122,31 +168,11 @@ while cap.isOpened():
                 image, (index_tip[0], index_tip[1]), (end[0], end[1]), (255, 0, 0), 5
             )
 
-            # compare chaser rect with hand origin
-            chaser_to_index_mcp = np.array(chaser_rect.position) - index_mcp
-            dx = 100 * delta_time * (1 if chaser_to_index_mcp[0] < 0 else -1)
-            dy = 100 * delta_time * (1 if chaser_to_index_mcp[1] < 0 else -1)
-            chaser_rect.position[0] += dx
-            chaser_rect.position[1] += dy
-
-            is_hit = False
-            chaser_rect_end = chaser_rect.get_end()
-            for landmark in hand_landmarks.landmark:
-                x = int(landmark.x * w)
-                y = int(landmark.y * h)
-                if (
-                    x >= chaser_rect.position[0]
-                    and x <= chaser_rect_end[0]
-                    and y >= chaser_rect.position[1]
-                    and y <= chaser_rect_end[1]
-                ):
-                    is_hit = True
-                    break
             if is_hit:
                 print("hit")
 
-    rect.render(image)
-    chaser_rect.render(image)
+    for rect in rect_list:
+        rect.render(image)
 
     image = cv2.flip(image, 1)
     cv2.imshow("MediaPipe Hands", image)
