@@ -14,8 +14,7 @@ import numpy as np
 import speech_recognition as sr
 import whisper
 import torch
-import threading
-from threading import Thread
+import multiprocessing
 
 from datetime import datetime, timedelta
 from queue import Queue
@@ -232,314 +231,322 @@ def voice():
         except KeyboardInterrupt:
             break
 
-game_is_on = False
-game_over = False
+def visual():
+    game_is_on = True
+    game_over = False
 
-hands = mp_hands.Hands(
-    static_image_mode=False,
-    max_num_hands=1,
-    min_detection_confidence=0.5,
-    min_tracking_confidence=0.5,
-)
+    hands = mp_hands.Hands(
+        static_image_mode=False,
+        max_num_hands=1,
+        min_detection_confidence=0.5,
+        min_tracking_confidence=0.5,
+    )
 
-face_detection = mp_face_detection.FaceDetection(
-    model_selection=0,  # 0 for short-range, 1 for full-range
-    min_detection_confidence=0.5,
-)
-
-
-# # Initialize Hand Gesture Recognizer
-# BaseOptions = mp.tasks.BaseOptions
-# GestureRecognizer = mp.tasks.vision.GestureRecognizer
-# GestureRecognizerOptions = mp.tasks.vision.GestureRecognizerOptions
-# GestureRecognizerResult = mp.tasks.vision.GestureRecognizerResult
-# VisionRunningMode = mp.tasks.vision.RunningMode
+    face_detection = mp_face_detection.FaceDetection(
+        model_selection=0,  # 0 for short-range, 1 for full-range
+        min_detection_confidence=0.5,
+    )
 
 
-options = GestureRecognizerOptions(
-    base_options=BaseOptions(model_asset_path="gesture_recognizer.task"),
-    running_mode=VisionRunningMode.LIVE_STREAM,
-    result_callback=lambda result, image, timestamp_ms: process_results(result),
-)
-recognizer = GestureRecognizer.create_from_options(options)
-recognizer_is_on = True
-
-cap = cv2.VideoCapture(0)  # 0 for default camera
-
-# initializing things for the chasing rectangle
-rect_list = []
-
-start_time = time.time()
-previous_loop_time = start_time
-previous_shot_time = start_time
-previous_shot_tracer = None
-previous_damaged_time = None
-previous_spawn_time = None
-spawn_delay = None
-
-health = INITIAL_HEALTH
-score = 0
-
-# game_is_on = True
-
-def process_results(result):
-    if result.gestures:
-        for gesture in result.gestures:
-            print(gesture)
-            if gesture[0].category_name == "Thumb_Up" and gesture[0].score > 0.6:
-                print("Thumbs_Up")
-                global game_is_on
-                game_is_on = True
+    # # Initialize Hand Gesture Recognizer
+    # BaseOptions = mp.tasks.BaseOptions
+    # GestureRecognizer = mp.tasks.vision.GestureRecognizer
+    # GestureRecognizerOptions = mp.tasks.vision.GestureRecognizerOptions
+    # GestureRecognizerResult = mp.tasks.vision.GestureRecognizerResult
+    # VisionRunningMode = mp.tasks.vision.RunningMode
 
 
-while cap.isOpened():
-    print(game_is_on)
-    current_time = time.time()
-    delta_time = current_time - previous_loop_time
-    previous_loop_time = current_time
+    # options = GestureRecognizerOptions(
+    #     base_options=BaseOptions(model_asset_path="gesture_recognizer.task"),
+    #     running_mode=VisionRunningMode.LIVE_STREAM,
+    #     result_callback=lambda result, image, timestamp_ms: process_results(result),
+    # )
+    # recognizer = GestureRecognizer.create_from_options(options)
+    # recognizer_is_on = True
 
-    success, image = cap.read()
-    if not success:
-        print("Ignoring empty camera frame.")
-        continue
+    cap = cv2.VideoCapture(0)  # 0 for default camera
 
-    image.flags.writeable = False
-    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    # initializing things for the chasing rectangle
+    rect_list = []
 
-    hand_results = hands.process(image)
-    face_results = face_detection.process(image)
+    start_time = time.time()
+    previous_loop_time = start_time
+    previous_shot_time = start_time
+    previous_shot_tracer = None
+    previous_damaged_time = None
+    previous_spawn_time = None
+    spawn_delay = None
 
-    image.flags.writeable = True
-    image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
-    h, w, c = image.shape
-    if game_is_on:
-        if recognizer_is_on:
-            recognizer.close()
-            recognizer_is_on = False
-    elif recognizer_is_on:
-        mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=image)
-        recognizer.recognize_async(mp_image, int((current_time - start_time) * 1000))
+    health = INITIAL_HEALTH
+    score = 0
 
-    if game_is_on and (
-        previous_spawn_time is None
-        or spawn_delay is None
-        or current_time - previous_spawn_time > spawn_delay
-    ):
-        x = (
-            random.uniform(0, 200)
-            if random.choice([True, False])
-            else random.uniform(w - 200, w)
-        )
-        y = (
-            random.uniform(0, 100)
-            if random.choice([True, False])
-            else random.uniform(h - 100, h)
-        )
-        rect_list.append(Rect([x, y], 64))
-        previous_spawn_time = current_time
-        spawn_delay = random.normalvariate(4, 1)
+    # game_is_on = True
 
-    face_bounding_box = None
-    is_hit = 0  # 0 is not hit, 1 is hit on face, 2 is hit on hand
+    def process_results(result):
+        if result.gestures:
+            for gesture in result.gestures:
+                print(gesture)
+                if gesture[0].category_name == "Thumb_Up" and gesture[0].score > 0.6:
+                    print("Thumbs_Up")
+                    global game_is_on
+                    game_is_on = True
 
-    if face_results.detections:
-        detection = next(iter(face_results.detections))
 
-        mp_drawing.draw_detection(image, detection)
+    while cap.isOpened():
+        # print(game_is_on)
+        current_time = time.time()
+        delta_time = current_time - previous_loop_time
+        previous_loop_time = current_time
+
+        success, image = cap.read()
+        if not success:
+            print("Ignoring empty camera frame.")
+            continue
+
+        image.flags.writeable = False
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+
+        hand_results = hands.process(image)
+        face_results = face_detection.process(image)
+
+        image.flags.writeable = True
+        image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+        h, w, c = image.shape
+        # if game_is_on:
+        #     if recognizer_is_on:
+        #         # recognizer.close()
+        #         recognizer_is_on = False
+        # elif recognizer_is_on:
+        #     mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=image)
+        #     recognizer.recognize_async(mp_image, int((current_time - start_time) * 1000))
+
+        if game_is_on and (
+            previous_spawn_time is None
+            or spawn_delay is None
+            or current_time - previous_spawn_time > spawn_delay
+        ):
+            x = (
+                random.uniform(0, 200)
+                if random.choice([True, False])
+                else random.uniform(w - 200, w)
+            )
+            y = (
+                random.uniform(0, 100)
+                if random.choice([True, False])
+                else random.uniform(h - 100, h)
+            )
+            rect_list.append(Rect([x, y], 64))
+            previous_spawn_time = current_time
+            spawn_delay = random.normalvariate(4, 1)
+
+        face_bounding_box = None
+        is_hit = 0  # 0 is not hit, 1 is hit on face, 2 is hit on hand
+
+        if face_results.detections:
+            detection = next(iter(face_results.detections))
+
+            mp_drawing.draw_detection(image, detection)
+
+            if game_is_on:
+                bbox = detection.location_data.relative_bounding_box
+                fbbx = int(bbox.xmin * w)
+                fbby = int(bbox.ymin * h)
+                fbbw = int(bbox.width * w)
+                fbbh = int(bbox.height * h)
+                face_center = np.array((fbbx + fbbw / 2, fbby + fbbh / 2))
+                face_bounding_box = (fbbx, fbby, fbbw, fbbh)
+
+                for rect in rect_list:
+                    rect.chase(face_center, delta_time)
+                    if is_hit == 0 and rect.intersects(face_bounding_box):
+                        is_hit = 1
+
+        if hand_results.multi_hand_landmarks:
+            for hand_landmarks in hand_results.multi_hand_landmarks:
+                mp_drawing.draw_landmarks(image, hand_landmarks, mp_hands.HAND_CONNECTIONS)
+
+                if not game_is_on:
+                    continue
+
+                index_tip = hand_landmarks.landmark[mp_hands.HandLandmark.INDEX_FINGER_TIP]
+                index_tip = np.array((int(index_tip.x * w), int(index_tip.y * h)))
+                index_mcp = hand_landmarks.landmark[mp_hands.HandLandmark.INDEX_FINGER_MCP]
+                index_mcp = np.array((int(index_mcp.x * w), int(index_mcp.y * h)))
+                direction = index_tip - index_mcp
+                end = direction * 100 + index_tip
+
+                hit_indices = []  # The indices of the rectangles that are hit.
+                for i, rect in enumerate(rect_list):
+                    hits = rect.compute_hits(index_tip, direction)
+                    for hit in hits:
+                        cv2.circle(image, (hit[0], hit[1]), 10, (0, 0, 255), -1)
+                    if len(hits) > 0:
+                        hit_indices.append(i)
+
+                    if not face_results.detections:
+                        rect.chase(index_mcp, delta_time)
+
+                    if is_hit != 0:
+                        continue
+                    rect_end = rect.get_end()
+                    for landmark in hand_landmarks.landmark:
+                        x = int(landmark.x * w)
+                        y = int(landmark.y * h)
+                        if (
+                            x >= rect.position[0]
+                            and x <= rect_end[0]
+                            and y >= rect.position[1]
+                            and y <= rect_end[1]
+                        ):
+                            is_hit = 2
+                            break
+
+                delta_time_shot = current_time - previous_shot_time
+                if delta_time_shot < SHOT_FIRE_TRACER_TIME:
+                    pass
+                elif delta_time_shot < SHOT_COOLDOWN_TIME:
+                    previous_shot_tracer = None
+                    pass
+                elif delta_time_shot < SHOT_DELAY:
+                    cv2.line(
+                        image,
+                        (index_tip[0], index_tip[1]),
+                        (end[0], end[1]),
+                        SHOT_NORMAL_COLOR,
+                        5,
+                    )
+                elif delta_time_shot < SHOT_DELAY + SHOT_SIGNAL_TIME:
+                    cv2.line(
+                        image,
+                        (index_tip[0], index_tip[1]),
+                        (end[0], end[1]),
+                        SHOT_SIGNAL_COLOR,
+                        5,
+                    )
+                else:
+                    previous_shot_tracer = ((index_tip[0], index_tip[1]), (end[0], end[1]))
+                    previous_shot_time = current_time
+                    for i in reversed(hit_indices):
+                        score += SCORE_PER_KILL
+                        rect_list.pop(i)
+
+                if previous_shot_tracer is not None:
+                    start, end = previous_shot_tracer
+                    cv2.line(
+                        image,
+                        start,
+                        end,
+                        SHOT_FIRE_COLOR,
+                        8,
+                    )
+                # if voiceSelect:
+                #     if len(hit_indices) > 0:
+                #         print(hit_indices, 'boxes were selected')
+                #     voiceSelect = False
+
+
+        if is_hit != 0 and (
+            previous_damaged_time is None
+            or current_time - previous_damaged_time > DAMAGE_GRACE_PERIOD
+        ):
+            # health -= DAMAGE_FACE if is_hit == 1 else DAMAGE_HAND
+            if health <= 0:
+                game_over = True
+                game_is_on = False
+                rect_list.clear()
+            previous_damaged_time = current_time
+            print(f"Health: {health}")
+
+        for rect in rect_list:
+            rect.render(image)
+
+        image = cv2.flip(image, 1)
 
         if game_is_on:
-            bbox = detection.location_data.relative_bounding_box
-            fbbx = int(bbox.xmin * w)
-            fbby = int(bbox.ymin * h)
-            fbbw = int(bbox.width * w)
-            fbbh = int(bbox.height * h)
-            face_center = np.array((fbbx + fbbw / 2, fbby + fbbh / 2))
-            face_bounding_box = (fbbx, fbby, fbbw, fbbh)
+            cv2.putText(
+                image,
+                f"Health: {health}",
+                (75, 100),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                2,
+                (0, 0, 255),
+                4,
+            )
+            cv2.putText(
+                image,
+                f"Score: {score}",
+                (75, 200),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                2,
+                (0, 0, 255),
+                4,
+            )
+        elif game_over:
+            font_face = cv2.FONT_HERSHEY_SIMPLEX
+            font_size = 4
+            thickness = 6
+            text = "Game Over"
+            text_width, text_height = cv2.getTextSize(
+                text, font_face, font_size, thickness
+            )[0]
+            org = (int((w - text_width) / 2), 200)
+            cv2.putText(
+                image,
+                text,
+                org,
+                font_face,
+                font_size,
+                (0, 0, 255),
+                thickness,
+            )
+            text = f"Score: {score}"
+            text_width, _ = cv2.getTextSize(text, font_face, font_size, thickness)[0]
+            org = (int((w - text_width) / 2), 200 + text_height + 48)
+            cv2.putText(
+                image,
+                text,
+                org,
+                font_face,
+                font_size,
+                (0, 0, 255),
+                thickness,
+            )
+        else:
+            font_face = cv2.FONT_HERSHEY_SIMPLEX
+            font_size = 4
+            thickness = 6
+            text = "Thumbs Up to Start"
+            text_width, text_height = cv2.getTextSize(
+                text, font_face, font_size, thickness
+            )[0]
+            org = (int((w - text_width) / 2), 200)
+            cv2.putText(
+                image,
+                text,
+                org,
+                font_face,
+                font_size,
+                (0, 0, 255),
+                thickness,
+            )
 
-            for rect in rect_list:
-                rect.chase(face_center, delta_time)
-                if is_hit == 0 and rect.intersects(face_bounding_box):
-                    is_hit = 1
+        # image = cv2.resize(image, (1000, 750))
+        cv2.imshow("MediaPipe Hands", image)
+        if cv2.waitKey(5) & 0xFF == 27:
+            break
 
-    if hand_results.multi_hand_landmarks:
-        for hand_landmarks in hand_results.multi_hand_landmarks:
-            mp_drawing.draw_landmarks(image, hand_landmarks, mp_hands.HAND_CONNECTIONS)
-
-            if not game_is_on:
-                continue
-
-            index_tip = hand_landmarks.landmark[mp_hands.HandLandmark.INDEX_FINGER_TIP]
-            index_tip = np.array((int(index_tip.x * w), int(index_tip.y * h)))
-            index_mcp = hand_landmarks.landmark[mp_hands.HandLandmark.INDEX_FINGER_MCP]
-            index_mcp = np.array((int(index_mcp.x * w), int(index_mcp.y * h)))
-            direction = index_tip - index_mcp
-            end = direction * 100 + index_tip
-
-            hit_indices = []  # The indices of the rectangles that are hit.
-            for i, rect in enumerate(rect_list):
-                hits = rect.compute_hits(index_tip, direction)
-                for hit in hits:
-                    cv2.circle(image, (hit[0], hit[1]), 10, (0, 0, 255), -1)
-                if len(hits) > 0:
-                    hit_indices.append(i)
-
-                if not face_results.detections:
-                    rect.chase(index_mcp, delta_time)
-
-                if is_hit != 0:
-                    continue
-                rect_end = rect.get_end()
-                for landmark in hand_landmarks.landmark:
-                    x = int(landmark.x * w)
-                    y = int(landmark.y * h)
-                    if (
-                        x >= rect.position[0]
-                        and x <= rect_end[0]
-                        and y >= rect.position[1]
-                        and y <= rect_end[1]
-                    ):
-                        is_hit = 2
-                        break
-
-            delta_time_shot = current_time - previous_shot_time
-            if delta_time_shot < SHOT_FIRE_TRACER_TIME:
-                pass
-            elif delta_time_shot < SHOT_COOLDOWN_TIME:
-                previous_shot_tracer = None
-                pass
-            elif delta_time_shot < SHOT_DELAY:
-                cv2.line(
-                    image,
-                    (index_tip[0], index_tip[1]),
-                    (end[0], end[1]),
-                    SHOT_NORMAL_COLOR,
-                    5,
-                )
-            elif delta_time_shot < SHOT_DELAY + SHOT_SIGNAL_TIME:
-                cv2.line(
-                    image,
-                    (index_tip[0], index_tip[1]),
-                    (end[0], end[1]),
-                    SHOT_SIGNAL_COLOR,
-                    5,
-                )
-            else:
-                previous_shot_tracer = ((index_tip[0], index_tip[1]), (end[0], end[1]))
-                previous_shot_time = current_time
-                for i in reversed(hit_indices):
-                    score += SCORE_PER_KILL
-                    rect_list.pop(i)
-
-            if previous_shot_tracer is not None:
-                start, end = previous_shot_tracer
-                cv2.line(
-                    image,
-                    start,
-                    end,
-                    SHOT_FIRE_COLOR,
-                    8,
-                )
-            # if voiceSelect:
-            #     if len(hit_indices) > 0:
-            #         print(hit_indices, 'boxes were selected')
-            #     voiceSelect = False
-
-
-    if is_hit != 0 and (
-        previous_damaged_time is None
-        or current_time - previous_damaged_time > DAMAGE_GRACE_PERIOD
-    ):
-        health -= DAMAGE_FACE if is_hit == 1 else DAMAGE_HAND
-        if health <= 0:
-            game_over = True
-            game_is_on = False
-            rect_list.clear()
-        previous_damaged_time = current_time
-        print(f"Health: {health}")
-
-    for rect in rect_list:
-        rect.render(image)
-
-    image = cv2.flip(image, 1)
-
-    if game_is_on:
-        cv2.putText(
-            image,
-            f"Health: {health}",
-            (75, 100),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            2,
-            (0, 0, 255),
-            4,
-        )
-        cv2.putText(
-            image,
-            f"Score: {score}",
-            (75, 200),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            2,
-            (0, 0, 255),
-            4,
-        )
-    elif game_over:
-        font_face = cv2.FONT_HERSHEY_SIMPLEX
-        font_size = 4
-        thickness = 6
-        text = "Game Over"
-        text_width, text_height = cv2.getTextSize(
-            text, font_face, font_size, thickness
-        )[0]
-        org = (int((w - text_width) / 2), 200)
-        cv2.putText(
-            image,
-            text,
-            org,
-            font_face,
-            font_size,
-            (0, 0, 255),
-            thickness,
-        )
-        text = f"Score: {score}"
-        text_width, _ = cv2.getTextSize(text, font_face, font_size, thickness)[0]
-        org = (int((w - text_width) / 2), 200 + text_height + 48)
-        cv2.putText(
-            image,
-            text,
-            org,
-            font_face,
-            font_size,
-            (0, 0, 255),
-            thickness,
-        )
-    else:
-        font_face = cv2.FONT_HERSHEY_SIMPLEX
-        font_size = 4
-        thickness = 6
-        text = "Thumbs Up to Start"
-        text_width, text_height = cv2.getTextSize(
-            text, font_face, font_size, thickness
-        )[0]
-        org = (int((w - text_width) / 2), 200)
-        cv2.putText(
-            image,
-            text,
-            org,
-            font_face,
-            font_size,
-            (0, 0, 255),
-            thickness,
-        )
-
-    # image = cv2.resize(image, (1000, 750))
-    cv2.imshow("MediaPipe Hands", image)
-    if cv2.waitKey(5) & 0xFF == 27:
-        break
-
-cap.release()
-cv2.destroyAllWindows()
+    cap.release()
+    cv2.destroyAllWindows()
 
 # # asyncio.run(voice())
 # graphicThread = Thread(target=visual)
 # graphicThread.run()
 # voiceThread = Thread(target=voice)
 # voiceThread.run()
+
+if __name__ == "__main__":
+    pvoice = multiprocessing.Process(target=voice)
+    pvoice.start()
+
+    pvisual = multiprocessing.Process(target=visual)
+    pvisual.start()
