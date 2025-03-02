@@ -4,6 +4,7 @@ import time
 import cv2
 import mediapipe.python.solutions.drawing_utils as mp_drawing
 import mediapipe.python.solutions.hands as mp_hands
+import mediapipe.python.solutions.face_mesh as mp_face_mesh
 import numpy as np
 
 SHOT_DELAY = 3
@@ -90,6 +91,13 @@ hands = mp_hands.Hands(
     min_tracking_confidence=0.5,
 )
 
+face_mesh = mp_face_mesh.FaceMesh(
+    max_num_faces=1,
+    refine_landmarks=True,
+    min_detection_confidence=0.5,
+    min_tracking_confidence=0.5,
+)
+
 cap = cv2.VideoCapture(0)  # 0 for default camera
 
 # initializing things for the chasing rectangle
@@ -113,7 +121,9 @@ while cap.isOpened():
 
     image.flags.writeable = False
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-    results = hands.process(image)
+
+    hand_results = hands.process(image)
+    face_results = face_mesh.process(image)
 
     image.flags.writeable = True
     image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
@@ -138,8 +148,29 @@ while cap.isOpened():
         previous_spawn_time = current_time
         spawn_delay = random.normalvariate(4, 1)
 
-    if results.multi_hand_landmarks:
-        for hand_landmarks in results.multi_hand_landmarks:
+    if face_results.multi_face_landmarks:
+        for face_landmarks in face_results.multi_face_landmarks:
+            mp_drawing.draw_landmarks(
+                image,
+                face_landmarks,
+                mp_face_mesh.FACEMESH_TESSELATION,
+                landmark_drawing_spec=None,
+                connection_drawing_spec=mp_drawing.DrawingSpec(
+                    thickness=1, circle_radius=1
+                ),
+            )
+            mp_drawing.draw_landmarks(
+                image,
+                face_landmarks,
+                mp_face_mesh.FACEMESH_CONTOURS,
+                landmark_drawing_spec=None,
+                connection_drawing_spec=mp_drawing.DrawingSpec(
+                    thickness=1, circle_radius=1
+                ),
+            )
+
+    if hand_results.multi_hand_landmarks:
+        for hand_landmarks in hand_results.multi_hand_landmarks:
             mp_drawing.draw_landmarks(image, hand_landmarks, mp_hands.HAND_CONNECTIONS)
 
             index_tip = hand_landmarks.landmark[mp_hands.HandLandmark.INDEX_FINGER_TIP]
